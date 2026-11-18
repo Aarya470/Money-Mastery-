@@ -46,7 +46,7 @@ export default function Coach({ state, update, tax, plan, go }) {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ messages: history.map(({ role, content }) => ({ role, content })), context: buildContext(state, tax, plan) }),
+        body: JSON.stringify({ messages: history.filter((m) => !m.error).map(({ role, content }) => ({ role, content })), context: buildContext(state, tax, plan) }),
       });
       if (!res.ok || !res.body) {
         failed = true;
