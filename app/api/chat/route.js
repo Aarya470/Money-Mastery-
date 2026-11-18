@@ -1,10 +1,30 @@
-// AI coach: proxies to OpenRouter (Qwen by default) and streams plain text back.
-// Set OPENROUTER_API_KEY in Vercel (Project → Settings → Environment Variables).
-// Optional: OPENROUTER_MODEL to switch models.
+// AI coach: proxies to Groq or OpenRouter (Qwen by default) and streams plain text back.
+// In Vercel (Project → Settings → Environment Variables) set ONE of:
+//   GROQ_API_KEY        → uses Groq, model qwen/qwen3-32b (override with GROQ_MODEL)
+//   OPENROUTER_API_KEY  → uses OpenRouter (override model with OPENROUTER_MODEL)
 
 export const maxDuration = 60;
 
-const MODEL = process.env.OPENROUTER_MODEL || 'qwen/qwen3.6-35b-a3b';
+function provider() {
+  if (process.env.GROQ_API_KEY) {
+    return {
+      key: process.env.GROQ_API_KEY,
+      url: `${process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1'}/chat/completions`,
+      model: process.env.GROQ_MODEL || 'qwen/qwen3-32b',
+      // Qwen3 on Groq: turn off thinking so answers start right away.
+      extra: { reasoning_effort: 'none', max_completion_tokens: 900 },
+    };
+  }
+  if (process.env.OPENROUTER_API_KEY) {
+    return {
+      key: process.env.OPENROUTER_API_KEY,
+      url: `${process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1'}/chat/completions`,
+      model: process.env.OPENROUTER_MODEL || 'qwen/qwen3.6-35b-a3b',
+      extra: { max_tokens: 900, reasoning: { exclude: true } },
+    };
+  }
+  return null;
+}
 
 const SYSTEM = `You are Payday Coach, a friendly financial literacy coach inside a budgeting app built by high school DECA students.
 Your users are mostly teens and young adults with a first job, a part-time job, or a first full-time salary.
@@ -19,9 +39,9 @@ How to answer:
 - Format with short paragraphs or "- " bullets. No tables, no headings, no emoji.`;
 
 export async function POST(req) {
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) {
-    return new Response('The AI coach is not connected yet. Add OPENROUTER_API_KEY to the app’s environment variables to turn it on.', {
+  const ai = provider();
+  if (!ai) {
+    return new Response('The AI coach is not connected yet. Add GROQ_API_KEY (or OPENROUTER_API_KEY) to the app’s environment variables in Vercel, then redeploy.', {
       status: 503,
       headers: { 'content-type': 'text/plain; charset=utf-8' },
     });
@@ -42,21 +62,20 @@ export async function POST(req) {
       .map((m) => ({ role: m.role, content: m.content.slice(0, 4000) })),
   ];
 
-  const upstream = await fetch(`${process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1'}/chat/completions`, {
+  const upstream = await fetch(ai.url, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${key}`,
+      Authorization: `Bearer ${ai.key}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': process.env.APP_URL || 'https://payday.vercel.app',
       'X-Title': 'Payday (DECA Financial Literacy)',
     },
     body: JSON.stringify({
-      model: MODEL,
+      model: ai.model,
       messages,
       stream: true,
       temperature: 0.5,
-      max_tokens: 900,
-      reasoning: { exclude: true },
+      ...ai.extra,
     }),
   });
 
