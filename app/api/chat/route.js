@@ -1,6 +1,6 @@
 // AI coach: proxies to Groq or OpenRouter (Qwen by default) and streams plain text back.
 // In Vercel (Project → Settings → Environment Variables) set ONE of:
-//   GROQ_API_KEY        → uses Groq, model qwen/qwen3-32b (override with GROQ_MODEL)
+//   GROQ_API_KEY        → uses Groq, model qwen/qwen3.8-27b (override with GROQ_MODEL)
 //   OPENROUTER_API_KEY  → uses OpenRouter (override model with OPENROUTER_MODEL)
 
 export const maxDuration = 60;
@@ -10,7 +10,7 @@ function provider() {
     return {
       key: process.env.GROQ_API_KEY,
       url: `${process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1'}/chat/completions`,
-      model: process.env.GROQ_MODEL || 'qwen/qwen3-32b',
+      model: process.env.GROQ_MODEL || 'qwen/qwen3.8-27b',
       // Qwen3 on Groq: turn off thinking so answers start right away.
       extra: { reasoning_effort: 'none', max_completion_tokens: 900 },
     };
@@ -38,6 +38,17 @@ How to answer:
 - If something looks like a scam or a risky choice (payday loans, gift-card payments, "get rich quick"), say so plainly.
 - Format with short paragraphs or "- " bullets. No tables, no headings, no emoji.`;
 
+// Text safe to show so far: removes <think>…</think> reasoning that some Qwen models
+// inline, hides an unfinished reasoning block, and holds back a tag that is still arriving.
+function visible(text) {
+  let t = text.replace(/<think>[\s\S]*?<\/think>/g, '');
+  const open = t.indexOf('<think>');
+  if (open !== -1) t = t.slice(0, open);
+  const lt = t.lastIndexOf('<');
+  if (lt !== -1 && '<think>'.startsWith(t.slice(lt))) t = t.slice(0, lt);
+  return t.replace(/^\s+/, '');
+}
+
 export async function POST(req) {
   const ai = provider();
   if (!ai) {
@@ -62,22 +73,23 @@ export async function POST(req) {
       .map((m) => ({ role: m.role, content: m.content.slice(0, 4000) })),
   ];
 
-  const upstream = await fetch(ai.url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${ai.key}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.APP_URL || 'https://payday.vercel.app',
-      'X-Title': 'Payday (DECA Financial Literacy)',
-    },
-    body: JSON.stringify({
-      model: ai.model,
-      messages,
-      stream: true,
-      temperature: 0.5,
-      ...ai.extra,
-    }),
-  });
+  const call = (extra) =>
+    fetch(ai.url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${ai.key}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.APP_URL || 'https://payday.vercel.app',
+        'X-Title': 'Payday (DECA Financial Literacy)',
+      },
+      body: JSON.stringify({ model: ai.model, messages, stream: true, temperature: 0.5, ...extra }),
+    });
+
+  let upstream = await call(ai.extra);
+  // Some models reject the reasoning options; retry once with only a token limit.
+  if (upstream.status === 400) {
+    upstream = await call({ max_tokens: 900 });
+  }
 
   if (!upstream.ok || !upstream.body) {
     const text = await upstream.text().catch(() => '');
@@ -90,7 +102,8 @@ export async function POST(req) {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
   let buffer = '';
-  let inThink = false;
+  let raw = '';
+  let sent = 0;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -108,16 +121,12 @@ export async function POST(req) {
             const data = t.slice(5).trim();
             if (data === '[DONE]') continue;
             try {
-              let delta = JSON.parse(data).choices?.[0]?.delta?.content || '';
-              // Some Qwen variants inline their reasoning in <think> tags; drop it.
-              if (delta.includes('<think>')) { inThink = true; delta = delta.split('<think>')[0]; }
-              if (inThink) {
-                const end = delta.indexOf('</think>');
-                if (end === -1) continue;
-                inThink = false;
-                delta = delta.slice(end + 8);
+              raw += JSON.parse(data).choices?.[0]?.delta?.content || '';
+              const shown = visible(raw);
+              if (shown.length > sent) {
+                controller.enqueue(encoder.encode(shown.slice(sent)));
+                sent = shown.length;
               }
-              if (delta) controller.enqueue(encoder.encode(delta));
             } catch {
               /* keep-alive comments and partial lines */
             }
