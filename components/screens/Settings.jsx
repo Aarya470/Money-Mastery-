@@ -23,10 +23,9 @@ export default function Settings({ state, update, reset }) {
       </div>
       <div className="grid">
         <section className="card span-6" aria-labelledby="h-you">
-          <div className="card-head"><h2 id="h-you">You and your chapter</h2></div>
+          <div className="card-head"><h2 id="h-you">You</h2></div>
           <div className="form-grid">
             <Field label="First name" hint="optional"><input className="input" value={state.name} onChange={(e) => update({ name: e.target.value })} maxLength={40} /></Field>
-            <Field label="DECA chapter" hint="shown in the header"><input className="input" value={state.chapter} onChange={(e) => update({ chapter: e.target.value })} maxLength={60} placeholder="Your high school" /></Field>
           </div>
         </section>
         <section className="card span-6" aria-labelledby="h-data">

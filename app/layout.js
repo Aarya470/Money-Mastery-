@@ -2,7 +2,7 @@ import './globals.css';
 
 export const metadata = {
   title: 'Payday · Budget, taxes and an AI money coach',
-  description: 'Turn a paycheck into a plan: estimate 2026 taxes, build a budget, track spending and learn money basics with an AI coach. A DECA Financial Literacy Project.',
+  description: 'Turn a paycheck into a plan: estimate 2026 taxes, build a budget, track spending and learn money basics with an AI coach.',
 };
 
 export const viewport = { width: 'device-width', initialScale: 1, themeColor: '#f3f5f7' };
