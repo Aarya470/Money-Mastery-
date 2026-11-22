@@ -1,6 +1,6 @@
 # Payday — budget, taxes and an AI money coach
 
-A DECA Financial Literacy Project app. Turn a paycheck into a plan: estimate 2026 taxes, build a budget, track spending, plan goals and debt, and learn the basics with an AI coach. Built with Next.js; all user data stays in the browser (localStorage).
+Turn a paycheck into a plan: estimate 2026 taxes, build a budget, track spending, plan goals and debt, and learn the basics with an AI coach. Built with Next.js; all user data stays in the browser (localStorage).
 
 ## What it does
 
@@ -13,7 +13,7 @@ A DECA Financial Literacy Project app. Turn a paycheck into a plan: estimate 202
 | **Goals & investing** | Savings goals with the monthly amount needed; "start at 16 vs start at 26" compound-growth chart. |
 | **Credit & debt** | Card/loan payoff with your payment vs minimum payments, interest saved, credit utilization. |
 | **AI coach** | Chat with a Qwen model via OpenRouter. It receives the user's calculated numbers so answers use them; it detects an income in a message and offers to apply it. |
-| **Learn & quiz** | Lessons on the six DECA areas (spending & saving, credit & debt, employment & income, investing, risk & insurance, decision making) and a 10-question quiz with **workshop pre-test / post-test mode** — average scores and a CSV export to use as key metrics in the written project. |
+| **Learn & quiz** | Lessons on six areas (spending & saving, credit & debt, employment & income, investing, risk & insurance, decision making) and a 10-question quiz with an explanation after each answer. |
 
 ## Run locally
 
@@ -37,4 +37,4 @@ The key lives only on the server (`app/api/chat/route.js`); it is never sent to 
 ## Notes
 
 - Tax figures: IRS 2026 inflation adjustments (standard deduction $16,100 single / $32,200 joint / $24,150 head of household; brackets 10–37%), SSA 2026 wage base $184,500. Estimates for learning, not tax advice.
-- Data never leaves the device except the questions sent to the coach. Settings → "Clear all data" resets a device between workshop participants.
+- Data never leaves the device except the questions sent to the coach. Settings → "Clear all data" resets the device.

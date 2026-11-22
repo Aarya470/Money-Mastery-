@@ -32,7 +32,7 @@ function provider() {
   return null;
 }
 
-const SYSTEM = `You are Payday Coach, a friendly financial literacy coach inside a budgeting app built by high school DECA students.
+const SYSTEM = `You are Payday Coach, a friendly financial literacy coach inside a budgeting app.
 Your users are mostly teens and young adults with a first job, a part-time job, or a first full-time salary.
 
 How to answer:
@@ -99,7 +99,7 @@ export async function POST(req) {
         Authorization: `Bearer ${ai.key}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': process.env.APP_URL || 'https://payday.vercel.app',
-        'X-Title': 'Payday (DECA Financial Literacy)',
+        'X-Title': 'Payday',
       },
       body: JSON.stringify({ model: ai.model, messages, stream: true, temperature: 0.5, ...extra }),
     });

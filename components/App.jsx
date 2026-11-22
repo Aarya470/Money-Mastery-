@@ -112,7 +112,6 @@ export default function App() {
         <div className="page">
           <div className="product">
             <Mark size={22} /> <b>Payday</b>
-            <span>· {state.chapter ? `${state.chapter} DECA` : 'DECA Financial Literacy'}</span>
           </div>
           <div className="screen" key={route}>
             <Screen {...ctx} />
